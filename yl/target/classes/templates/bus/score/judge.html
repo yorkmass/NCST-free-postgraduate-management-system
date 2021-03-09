@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:shiro="http://www.pollix.at/thymeleaf/shiro">
+<head>
+    <meta charset="UTF-8">
+    <title>材料复审</title>
+    <meta name="renderer" content="webkit">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+    <meta http-equiv="Access-Control-Allow-Origin" content="*">
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="format-detection" content="telephone=no">
+    <link rel="icon" href="/resources/favicon.ico">
+    <link rel="stylesheet" href="resources/layui/css/layui.css" th:href="@{/resources/layui/css/layui.css}"
+          media="all"/>
+    <link rel="stylesheet" href="resources/css/public.css" th:href="@{/resources/css/public.css}" media="all"/>
+    <link rel="stylesheet" th:href="@{/resources/layui_ext/dtree/dtree.css}" media="all"/>
+    <link rel="stylesheet" th:href="@{/resources/layui_ext/dtree/font/dtreefont.css}" media="all"/>
+</head>
+<style>
+    .uploadcss{
+        text-align: center;
+        margin-top: 15px;
+    }
+    .centerupload{
+        margin: 0 auto;
+    }
+</style>
+<body class="childrenBody">
+<!--查询条件-->
+<fieldset class="layui-elem-field layui-field-title" style="margin-top: 15px;">
+    <legend>材料复审</legend>
+</fieldset>
+<div style="margin-bottom: 20px">
+
+</div>
+
+<!--数据表格-->
+<div>
+    <table class="layui-hide" id="fileTable" lay-filter="fileTable"></table>
+
+    <div id="fileToolBar" style="display: none">
+
+
+    </div>
+    <div id="fileRowBar" style="display: none;">
+
+        <button type="button" lay-event="down"  class="layui-btn layui-btn-sm layui-btn-normal layui-btn-radius"><i
+                class="layui-icon layui-icon-down"></i>下载
+        </button>
+        <button type="button" lay-event="reject"  class="layui-btn layui-btn-sm layui-btn-danger layui-btn-radius"><i
+                class="layui-icon layui-icon-return"></i>驳回
+        </button>
+
+        <button type="button" lay-event="pass"  class="layui-btn layui-btn-sm layui-btn-radius"><i
+                class="layui-icon layui-icon-edit"></i>审核通过
+        </button>
+    </div>
+</div>
+
+<!--添加分值-->
+<div id="scoreAdd"  style="display: none;padding: 10px;padding-right: 5%">
+    <form class="layui-form layui-row" method="post">
+
+        <input type="hidden" name="id" id="updateid">
+
+        <div class="layui-form-item">
+            <div class="layui-inline" style="width: 100%;">
+                <label class="layui-form-label">加分分值</label>
+                <div class="layui-input-block">
+                    <input type="number" name="compscore" id="compscore" class="layui-input input-radius" placeholder="请输入分值...">
+                </div>
+            </div>
+        </div>
+
+        <div class="layui-form-item">
+            <div class="layui-input-block" style="text-align: center;padding-right: 16%">
+                <button class="layui-btn" lay-submit="" lay-filter="addscore" id="addscore">审核通过</button>
+                <button type="reset" class="layui-btn layui-btn-primary">重置</button>
+            </div>
+        </div>
+
+
+    </form>
+</div>
+
+
+
+
+
+
+
+
+<script type="text/javascript" src="/resources/layui/layui.js"></script>
+
+<script type="text/javascript">
+    layui.config({base:'/resources/layui_ext/'}).extend({ dtree: 'dtree/dtree',echarts: 'echarts/echarts'}).use(['jquery', 'form', 'layer', 'laydate', 'table','layedit','upload', 'dtree','element', 'echarts'], function () {
+        var $ = layui.jquery;
+        var element = layui.element;
+        echarts = layui.echarts;
+        var form = layui.form;
+        var layer = layui.layer;
+        var laydate = layui.laydate;
+        var table = layui.table;
+        var layedit = layui.layedit;
+        var upload = layui.upload;
+        var dtree = layui.dtree;
+
+
+
+
+
+
+
+
+        //初始化表格 加载数据
+        var tableIns = table.render({
+            elem: "#fileTable",
+            title: "文件数据表格",
+            url: "/bus/comprehensive/loadallfilesbyclass",
+            toolbar: "#fileToolBar",
+            page: true,
+            height: "full-190",
+            cols: [ [
+                {field: 'id', title: 'ID', align: 'center'},
+                {field: 'userid', title: '学号', align: 'center'},
+                {field: 'username', title: '姓名', align: 'center'},
+                {field: 'term', title: '学期', align: 'center'},
+                {field: 'submittime', title: '提交时间', align: 'center'},
+                {field: 'compscore', title: '加分分值', align: 'center'},
+                {field: 'filetitle', title: '文件名', align: 'center'},
+                {field: 'filecontent', title: '文件说明', align: 'center'},
+                {field: 'jstatus', title: '审核状态', align: 'center'},
+                {fixed: 'right', title: '操作', toolbar: '#fileRowBar',width:360, align: 'center'}
+            ] ],
+            done:function (data, curr, count) {
+                /* for (var i=0;i<data.data.length;i++)   //遍历返回数据
+                 {
+                     if(data.data[i].qualify=="有")    //设置条件
+                     {
+                         $("table tbody tr").eq(i).css('color','green')    //改变满足条件行的颜色
+                     }
+                 }
+                 */
+
+                /*if(data.count==0&&data.data.length==0){
+                    tableIns.reload({
+                        page:{
+                            curr:1
+                        }
+                    })
+                }else*/
+                /* console.log(data);
+                 console.log(curr);  //1
+                 console.log(count); //0*/
+
+                if(data.data.length==0&&curr!=1){   //不是第一页时，如果当前返回的数据为0那么就返回上一页
+                    tableIns.reload({
+                        page:{
+                            curr:curr-1
+                        }
+                    });
+                }/*else if (data.data.length==0 && curr==1){    //当前是第一页时，如果当前返回的数据为0并且当前为第一页  给一个空的查询条件，并给curr赋初值为1
+                    tableIns.reload({
+                        where: "",
+                        page:{
+                            curr:1
+                        }
+
+                    });
+                }*/
+            }
+        });
+
+
+
+
+        var mainIndex;
+        //打开分数赋值弹出层
+        function addFileLayer(data) {
+            mainIndex=layer.open({
+                type: 1,
+                content: $("#scoreAdd"),
+                area: ['500px', '300px'],
+                title: '确认分值',
+                success:function () {
+                    $("#updateid").val(data);
+                }
+            });
+        }
+
+        form.on("submit(addscore)", function (data) {
+            console.log(data.field);
+            $.post("/bus/comprehensive/fpass",data.field,function (res) {
+                if (res.code==200){
+                    tableIns.reload({
+                        //删除成功加载表格时，要重置查询条件
+                        where:"",
+                    });
+                }
+                layer.close(mainIndex);
+                layer.msg(res.msg);
+                $("#updateid").val("");
+                $("#compscore").val("");
+            });
+            return false;
+        });
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+        //监控行工具条事件
+        table.on("tool(fileTable)",function (obj) {
+            //获取当前行数据
+            var data = obj.data;
+            switch (obj.event){
+                case 'reject':
+                    rejectInfo(data);
+                    break;
+                case 'down':
+                    downfile(data);
+                    break;
+                case 'pass':
+                    passfile(data);
+            };
+        });
+
+        //下载
+        function downfile(data) {
+            console.log(data);
+            window.open("/bus/comprehensive/download?path="+data.file);
+
+        }
+
+        //驳回
+        function rejectInfo(data) {
+            layer.confirm('你确定要驳回【'+data.username+'】的文件吗？',{icon: 3,title:'提示'},function (index) {
+                $.post("/bus/comprehensive/reject",{id:data.id},function (res) {
+                    if (res.code==200){
+                        tableIns.reload({
+                            //删除成功加载表格时，要重置查询条件
+                            where:"",
+                        });
+                    }
+                    layer.msg(res.msg);
+                });
+                layer.close(index);
+            });
+        }
+
+        //通过
+        function passfile(data) {
+            addFileLayer(data.id);
+        }
+
+
+
+
+
+
+
+
+
+    });
+
+</script>
+
+</body>
+</html>

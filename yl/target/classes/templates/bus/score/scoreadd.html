@@ -1,0 +1,400 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:shiro="http://www.pollix.at/thymeleaf/shiro">
+<head>
+    <meta charset="UTF-8">
+    <title>成绩录入</title>
+    <meta name="renderer" content="webkit">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+    <meta http-equiv="Access-Control-Allow-Origin" content="*">
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="format-detection" content="telephone=no">
+    <link rel="icon" href="/resources/favicon.ico">
+    <link rel="stylesheet" href="resources/layui/css/layui.css" th:href="@{/resources/layui/css/layui.css}"
+          media="all"/>
+    <link rel="stylesheet" href="resources/css/public.css" th:href="@{/resources/css/public.css}" media="all"/>
+    <link rel="stylesheet" th:href="@{/resources/layui_ext/dtree/dtree.css}" media="all"/>
+    <link rel="stylesheet" th:href="@{/resources/layui_ext/dtree/font/dtreefont.css}" media="all"/>
+</head>
+<style>
+    .uploadcss{
+        text-align: center;
+        margin-top: 15px;
+    }
+    .centerupload{
+        margin: 0 auto;
+    }
+</style>
+<body class="childrenBody">
+<!--查询条件-->
+<fieldset class="layui-elem-field layui-field-title" style="margin-top: 15px;">
+    <legend>成绩导入</legend>
+</fieldset>
+<div style="margin-bottom: 20px">
+
+    <form action="" method="post" id="searchFrm" lay-filter="searchFrm" class="layui-form">
+        <div class="layui-form-item">
+            <div class="layui-inline">
+                <label class="layui-form-label">学生姓名</label>
+                <div class="layui-input-inline">
+                    <input type="text" name="username" id="username" class="layui-input input-radius"
+                           placeholder="请输入学生姓名">
+                </div>
+            </div>
+
+            <div class="layui-inline">
+                <label class="layui-form-label">班级名称</label>
+                <div class="layui-input-inline" style="width: 360px">
+                    <input type="hidden" name="deptid" id="search_deptid">
+                    <ul id="search_deptTree" class="dtree"  data-id="0"></ul>
+                </div>
+            </div>
+            <div class="layui-inline">
+                <label class="layui-form-label">竞争资格</label>
+                <div class="layui-input-block">
+                    <input type="checkbox" name="qua" lay-skin="switch" lay-text="有|无">
+                </div>
+            </div>
+        </div>
+        <div class="layui-form-item">
+            <div class="layui-input-block" style="text-align: center;padding-right: 15%;">
+                <button type="button" class="layui-btn layui-btn-sm layui-btn-radius" lay-submit="" lay-filter="doSearch"><i
+                        class="layui-icon layui-icon-search layui-icon-normal"></i>查询
+                </button>
+                <button type="reset" class="layui-btn layui-btn-sm layui-btn-radius layui-btn-warm" onclick="location.reload();"><i
+                        class="layui-icon layui-icon-refresh"></i><span>重置</span>
+                </button>
+            </div>
+        </div>
+    </form>
+
+</div>
+
+<!--数据表格-->
+<div>
+    <table class="layui-hide" id="scoreTable" lay-filter="scoreTable"></table>
+
+    <div id="scoreToolBar" style="display: none">
+        <button type="button" lay-event="batchDelete"  class="layui-btn layui-btn-sm layui-btn-danger layui-btn-radius">
+            <i class="layui-icon layui-icon-delete"></i>批量删除
+        </button>
+
+        <button type="button" lay-event="addBatch"  class="layui-btn layui-btn-sm layui-btn-radius">
+            <i class="layui-icon layui-icon-upload-drag"></i>导入Excel
+        </button>
+        <button type="button" lay-event="excelDown"  class="layui-btn layui-btn-sm  layui-btn-warm layui-btn-radius">
+            <a th:href="@{/resources/excel/exportscore.xls}"><i class="layui-icon layui-icon-download-circle"></i>模板下载</a>
+        </button>
+
+    </div>
+    <div id="scoreRowBar" style="display: none;">
+        <button type="button" lay-event="delete"  class="layui-btn layui-btn-sm layui-btn-danger layui-btn-radius"><i
+                class="layui-icon layui-icon-delete"></i>删除
+        </button>
+    </div>
+</div>
+
+<!--添加Excel导入成绩-->
+<div id="batchScoreExcel"  style="display: none;padding: 10px;padding-right: 5%">
+    <form class="layui-form layui-row" method="post">
+
+        <input type="hidden" name="excelpath" id="excelpath">
+        <div class="centerupload">
+            <div class="layui-form-item">
+                <div class="uploadcss">
+                    <button type="button" class="layui-btn" id="excelsave">
+                        <i class="layui-icon">&#xe67c;</i><label id="uptext">上传Excel</label>
+                    </button>
+                </div>
+            </div>
+
+            <div class="layui-form-item">
+                <div class="uploadcss">
+                    <button class="layui-btn" lay-submit="" lay-filter="exportexcel" id="exportnow">立即导入</button>
+                    <!--<button type="reset" class="layui-btn layui-btn-primary">重置</button>-->
+                </div>
+            </div>
+        </div>
+
+    </form>
+</div>
+
+
+
+
+<script type="text/javascript" src="/resources/layui/layui.js"></script>
+
+<script type="text/javascript">
+    layui.config({base:'/resources/layui_ext/'}).extend({ dtree: 'dtree/dtree',echarts: 'echarts/echarts'}).use(['jquery', 'form', 'layer', 'laydate', 'table','layedit','upload', 'dtree','element', 'echarts'], function () {
+        var $ = layui.jquery;
+        var element = layui.element;
+        echarts = layui.echarts;
+        var form = layui.form;
+        var layer = layui.layer;
+        var laydate = layui.laydate;
+        var table = layui.table;
+        var layedit = layui.layedit;
+        var upload = layui.upload;
+        var dtree = layui.dtree;
+
+
+
+
+
+
+
+        //初始化查询条件的下拉树
+        var selectTree = dtree.renderSelect({
+            elem: "#search_deptTree",
+            width: "100%", // 可以在这里指定树的宽度来填满div
+            dataStyle: "layuiStyle", //使用layui风格的数据格式
+            dataFormat: "list",     //配置data的风格为list
+            response: {message: "msg", statusCode: 0},  //修改response中返回数据的定义
+            url: "/dept/loadDeptManagerLeftTreeJson" ,// 使用url加载（可与data加载同时存在）
+        });
+
+        //监听点击的方法
+        dtree.on("node(search_deptTree)", function (obj) {
+            $("#search_deptid").val(obj.param.nodeId);
+            console.log(obj.param.nodeId);
+        });
+
+
+
+
+        //初始化表格 加载数据
+        var tableIns = table.render({
+            elem: "#scoreTable",
+            title: "成绩数据表格",
+            url: "/bus/basicscore/loadbasicscore",
+            toolbar: "#scoreToolBar",
+            page: true,
+            height: "full-190",
+            cols: [ [
+                {type: 'checkbox', fixed: 'left'},
+                {field: 'id', title: 'ID', align: 'center'},
+                {field: 'userid', title: '学号', align: 'center'},
+                {field: 'username', title: '姓名', align: 'center'},
+                {field: 'deptname', title: '班级', align: 'center'},
+                {field: 'pdeptname', title: '专业', align: 'center'},
+                {field: 'avascore', title: '平均成绩', align: 'center'},
+                {field: 'avastuscore', title: '平均学分成绩', align: 'center'},
+                {field: 'addscore', title: '加权学分成绩', align: 'center'},
+                {field: 'paddscore', title: '特殊加权学分成绩', align: 'center'},
+                {field: 'rank', title: '名次', align: 'center'},
+                {field: 'qualify', title: '资格', align: 'center'},
+                {fixed: 'right', title: '操作', toolbar: '#scoreRowBar', align: 'center'}
+            ] ],
+            done:function (data, curr, count) {
+                for (var i=0;i<data.data.length;i++)   //遍历返回数据
+                {
+                    if(data.data[i].qualify=="有")    //设置条件
+                    {
+                        $("table tbody tr").eq(i).css('color','green')    //改变满足条件行的颜色
+                    }
+                }
+
+                /*if(data.count==0&&data.data.length==0){
+                    tableIns.reload({
+                        page:{
+                            curr:1
+                        }
+                    })
+                }else*/
+                /* console.log(data);
+                 console.log(curr);  //1
+                 console.log(count); //0*/
+
+                if(data.data.length==0&&curr!=1){   //不是第一页时，如果当前返回的数据为0那么就返回上一页
+                    tableIns.reload({
+                        page:{
+                            curr:curr-1
+                        }
+                    });
+                }/*else if (data.data.length==0 && curr==1){    //当前是第一页时，如果当前返回的数据为0并且当前为第一页  给一个空的查询条件，并给curr赋初值为1
+                    tableIns.reload({
+                        where: "",
+                        page:{
+                            curr:1
+                        }
+
+                    });
+                }*/
+            }
+        });
+
+
+
+        //上传文档接口
+        var uploadInst = upload.render({
+            elem: '#excelsave' //绑定元素
+            ,url: '/user/excelupload' //上传接口
+            ,accept:'file'//允许的文件类型
+            ,field:'mf'
+            ,done: function(res){
+                var path=res.path;
+                var excelpath=$("#excelpath");
+                var excelsave=$("#excelsave");
+                excelsave.addClass("layui-btn-disabled");
+                $("#uptext").html("已接收");
+                excelpath.val(path);
+                console.log(excelpath.val());
+                layer.msg("文件已经接收成功！请点击：\"立即导入\"快速生成用户数据");
+            }
+            ,error: function(){
+                layer.msg("上传出错！")
+            }
+        });
+
+        //提交转换excel
+        form.on("submit(exportexcel)",function(data){
+            var excelpath=$("#excelpath");
+            if(excelpath.val()==''){
+                layer.msg("请上传Excel表格");
+            }
+            else {
+                var index = layer.msg('数据转换中，请稍候',{icon: 16,time:false,shade:0.8});
+                $.post("/bus/basicscore/exceltoScore", data.field, function (res) {
+                    layer.msg(res.msg);
+                    layer.close(index);
+                    layer.close(mainIndex);
+                    tableIns.reload('scoreTable',{
+                        page: {
+                            curr: 1
+                        }
+                    });
+                });
+                var excelsave=$("#excelsave");
+                excelsave.removeClass("layui-btn-disabled");
+                $("#uptext").html("上传Excel");
+
+                }
+            return false; //阻止表单跳转。如果需要表单跳转，去掉这段即可。
+        });
+
+
+
+        //监控模糊查询按钮事件
+        form.on("submit(doSearch)", function (data) {
+            if(data.field.qua=='on'){
+                data.field.qualify="有";
+            }
+            else {
+                data.field.qualify="无";
+            }
+            console.log(data.field.qualify);
+            tableIns.reload({
+                where: data.field,
+                page: {
+                    curr: 1
+                }
+            });
+            return false;
+        });
+
+
+
+        //监控工具条事件
+        table.on("toolbar(scoreTable)", function (obj) {
+            switch (obj.event) {
+                case 'batchDelete':
+                    batchDelete();
+                    break;
+                case 'addBatch':
+                    addBatchLayer();
+                    break;
+            };
+        });
+
+        var mainIndex;
+        //打开导入文件弹出层
+        function addBatchLayer() {
+            mainIndex=layer.open({
+                type: 1,
+                content: $("#batchScoreExcel"),
+                area: ['300px', '200px'],
+                title: 'Excel批量导入学生成绩',
+                success:function () {
+                    var excelpath=$("#excelpath");
+                    excelpath.val("");
+                }
+            });
+        }
+
+        //监控行工具条事件
+        table.on("tool(scoreTable)",function (obj) {
+            //获取当前行数据
+            var data = obj.data;
+            switch (obj.event){
+                case 'delete':
+                    deleteInfo(data);
+                    break;
+            };
+        });
+
+        //删除
+        function deleteInfo(data) {
+            layer.confirm('你确定要删除【'+data.username+'】这个学生成绩吗？',{icon: 3,title:'提示'},function (index) {
+                $.post("/bus/basicscore/delectscore",{id:data.id},function (res) {
+                    if (res.code==200){
+                        tableIns.reload({
+                            //删除成功加载表格时，要重置查询条件
+                            where:"",
+                        });
+                    }
+                    layer.msg(res.msg);
+                });
+                layer.close(index);
+            });
+        }
+
+        //批量删除
+        function batchDelete() {
+            //得到选中行
+            var checkStatus = table.checkStatus('scoreTable');
+            var dataLength = checkStatus.data.length;
+            if (dataLength>0){
+                layer.confirm('你确定要删除这些成绩吗？',{icon: 3,title: '提示'},function (index) {
+                    //获取选中行数据
+                    var data = checkStatus.data;
+                    var ids = "";
+                    $.each(data,function (index, item) {
+                        if (index==0){
+                            ids+="ids="+item.id;
+                        }else {
+                            ids+="&ids="+item.id;
+                        }
+                    });
+                    $.post("/bus/basicscore/batchdelectscore",ids,function (res) {
+                        if (res.code==200){
+                            //重新刷新表格
+                            tableIns.reload({
+                                where:"",
+                            });
+                        }
+                        layer.msg(res.msg);
+                    });
+                    layer.close(index);
+                });
+            }else {
+                layer.msg("请选中操作行")
+            }
+        }
+
+        var mainIndex;
+        var url;
+
+
+
+
+
+
+
+    });
+
+</script>
+
+</body>
+</html>
